@@ -5,7 +5,7 @@ A single-page website for Geometry Dash players who want to plan which extreme d
 ## What it does
 
 - **Demon List.** Shows every level on the AREDL, ranked, with the level image, rank, publisher, verifier and level ID. A search box filters by name, publisher, verifier or level ID.
-- **Progression List.** A personal list of the levels you chose. Drag rows to reorder them.
+- **Progression List.** A personal list of the levels you chose. Levels always stay in AREDL rank order.
 - **Adding and removing.** Clicking a level in the Demon List opens a confirmation ("Are you sure you want to add this to your Progression List?"). Clicking a level in the Progression List opens the matching remove confirmation. The red X cancels and the green check confirms.
 - **Beaten levels.** Hovering a level in the Progression List shows a green check button. Clicking it tints the row green. Click it again to undo.
 - **Level video.** Clicking a level's image opens its verification video in a new tab.
