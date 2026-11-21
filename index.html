@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APL Demon List</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&display=swap">
+<style>
+:root{--red:#c20c0a;--bright:#ff3b3b;--pill:#c8d0d9;--ink:#111;--ok:#76b900}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh;color:#fff;font-family:Archivo,"Segoe UI",Arial,sans-serif;
+  /* Put bg.jpg next to this file to use your own background image. */
+  background:url(bg.jpg) center/cover fixed,
+    radial-gradient(ellipse at 15% 40%,rgba(255,30,30,.55),transparent 45%),
+    radial-gradient(ellipse at 85% 45%,rgba(255,30,30,.5),transparent 45%),
+    radial-gradient(ellipse at 50% 100%,rgba(190,0,0,.55),transparent 50%),#050000;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:8px 16px;background:rgba(0,0,0,.85)}
+.logo{display:flex;align-items:center;height:56px}
+.logo img{height:56px;width:auto;max-width:100%}
+.logo .fallback{font-weight:800;font-style:italic;font-size:2.4rem;letter-spacing:.04em;
+  background:linear-gradient(#fff,#8a8f99 60%,#e5e7eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{margin:0;text-align:center;color:#d40f0f;font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800}
+nav{display:flex;gap:12px;justify-content:flex-end}
+nav button{background:var(--bright);color:#fff;border:0;padding:12px 18px;font:700 1rem Archivo,Arial,sans-serif;cursor:pointer;min-width:150px}
+nav button[aria-current=true]{outline:3px solid #fff;outline-offset:-3px}
+nav button:hover{filter:brightness(1.1)}
+main{padding:22px 16px 50px}
+.frame{max-width:760px;margin:0 auto;background:var(--red);border-radius:30px;padding:12px}
+.inner{background:#fff;padding:10px}
+.panel{background:var(--red);padding:10px;height:min(70vh,820px);overflow:auto}
+.search{width:100%;margin:0 0 10px;padding:9px 14px;border-radius:18px;border:0;background:var(--pill);color:var(--ink);font:inherit}
+.status{color:#fff;font-size:.85rem;margin:0 0 10px;text-align:center}
+.err{background:#000;color:#ff8a8a;border-radius:12px;padding:10px;margin:0 0 10px;white-space:pre-wrap;font-size:.9rem}
+.row{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr) minmax(0,220px);gap:12px;align-items:center;background:#000;border-radius:26px;padding:8px;margin-bottom:12px;cursor:pointer;position:relative}
+.row:hover{outline:3px solid #fff}
+.row.in{opacity:.55;cursor:default}
+.row.in:hover{outline:0}
+.row.done{background:#06240a;box-shadow:inset 0 0 0 3px var(--ok)}
+.thumb{aspect-ratio:1.75;border-radius:22px;background:var(--pill);color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;position:relative;padding:6px;font-weight:700}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rank{position:absolute;left:8px;top:6px;background:#000;color:#fff;border-radius:10px;padding:0 7px;font-size:.8rem;z-index:1}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pill{background:var(--pill);color:var(--ink);border-radius:18px;padding:6px 10px;text-align:center;overflow-wrap:anywhere;font-size:.95rem}
+.col.right{gap:12px}
+.beat{position:absolute;right:10px;top:8px;width:36px;height:36px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:1.2rem;cursor:pointer;opacity:0;transition:opacity .12s}
+.row:hover .beat,.beat:focus{opacity:1}
+@media (hover:none){.beat{opacity:1}}
+.empty{color:#fff;text-align:center;padding:30px 10px}
+.overlay{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:20;padding:16px}
+.overlay[hidden]{display:none}
+.msg{background:var(--pill);color:var(--ink);border-radius:26px;padding:22px 30px;max-width:360px;text-align:center;font-size:1.05rem}
+.msg small{display:block;margin-top:8px;opacity:.7}
+.btns{display:flex;gap:60px}
+.btns button{width:96px;height:96px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.btns .no{background:#ff3b3b}.btns .yes{background:var(--ok)}
+.btns button:hover{filter:brightness(1.12)}
+.btns svg{width:56px;height:56px}
+@media (max-width:700px){
+  header{grid-template-columns:1fr;justify-items:center}
+  nav{justify-content:center;flex-wrap:wrap}
+  nav button{min-width:130px}
+  .row{grid-template-columns:1fr}
+  .thumb{aspect-ratio:2}
+  .col.right{flex-direction:row}.col.right .pill{flex:1}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="logo.png" alt="APL" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'fallback',textContent:'APL'}))"></div>
+  <h1 id="title">Demon List</h1>
+  <nav>
+    <button id="tabDemon" aria-current="true">Demon List</button>
+    <button id="tabProg" aria-current="false">Progression List</button>
+  </nav>
+</header>
+
+<main>
+  <div class="frame"><div class="inner"><div class="panel" id="panel">
+    <input id="q" class="search" type="search" placeholder="Search name, creator or level ID">
+    <p class="status" id="status">Loading...</p>
+    <div id="err"></div>
+    <div id="rows"></div>
+  </div></div></div>
+</main>
+
+<div class="overlay" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="cmsg">
+  <div class="msg" id="cmsg"></div>
+  <div class="btns">
+    <button class="no" id="cno" aria-label="No"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"><path d="M4 4l16 16M20 4L4 20"/></svg></button>
+    <button class="yes" id="cyes" aria-label="Yes"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l5 5L20 6"/></svg></button>
+  </div>
+</div>
+
+<script>
+var API = "https://api.aredl.net/v2/api/aredl/levels";
+var REFRESH_MS = 5 * 60 * 1000;
+var KEY_PROG = "apl.prog.v1", KEY_DATA = "apl.levels.v1";
+var view = "demon", levels = [], byKey = {}, fetchedAt = null, dragFrom = null;
+var prog = load(KEY_PROG) || [];
+
+function save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+
+// The API schema was not verified when this was written, so field names are matched loosely.
+function nameOf(p){
+  if(!p) return "";
+  if(typeof p === "string") return p;
+  return p.global_name || p.display_name || p.username || p.name || "";
+}
+function listNames(v){
+  if(Array.isArray(v)) return v.map(nameOf).filter(Boolean).join(", ");
+  return nameOf(v);
+}
+function ytThumb(url){
+  var m = typeof url === "string" && url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);
+  return m ? "https://img.youtube.com/vi/" + m[1] + "/mqdefault.jpg" : "";
+}
+function fmtDate(v){
+  if(!v) return "";
+  var d = new Date(v);
+  if(isNaN(d)) return "";
+  var p = function(n){ return String(n).padStart(2,"0"); };
+  return p(d.getMonth()+1) + "/" + p(d.getDate()) + "/" + d.getFullYear();
+}
+// Looks through every field of a level for an image link, then for a YouTube video to use its thumbnail.
+function findImage(o){
+  var best = "", yt = "";
+  (function walk(v, key, depth){
+    if(depth > 4 || v == null) return;
+    if(typeof v === "string"){
+      if(/^https?:\/\//i.test(v)){
+        if(!yt){ var t = ytThumb(v); if(t) yt = t; }
+        if(!best && (/\.(png|jpe?g|webp|gif)(\?|$)/i.test(v) || /thumb|image|cover|banner|preview/i.test(key))) best = v;
+      }
+      return;
+    }
+    if(Array.isArray(v)){ v.forEach(function(x){ walk(x, key, depth + 1); }); return; }
+    if(typeof v === "object"){ Object.keys(v).forEach(function(k){ walk(v[k], k, depth + 1); }); }
+  })(o, "", 0);
+  return best || yt;
+}
+function normalize(l){
+  var gd = l.level_id != null ? l.level_id : (l.levelId != null ? l.levelId : "");
+  var pos = l.position != null ? l.position : l.pos;
+  var ver = l.verifier || l.verification || (l.verifications && l.verifications[0]) || null;
+  var video = l.video_url || l.video || (ver && (ver.video_url || ver.video)) || "";
+  return {
+    key: String(gd !== "" ? gd : (l.id != null ? l.id : l.name)),
+    gd: gd,
+    pos: typeof pos === "number" ? pos : null,
+    name: l.name || "Unnamed level",
+    publisher: nameOf(l.publisher),
+    creator: listNames(l.creators) || listNames(l.creator),
+    verifier: nameOf(l.verifier) || nameOf(ver && (ver.submitted_by || ver.player || ver.user)) || "",
+    date: fmtDate(l.published_at || l.date_published || l.created_at || l.date || l.publish_date),
+    img: findImage(l),
+    legacy: l.legacy != null ? !!l.legacy : /legacy/i.test(String(l.status || "")),
+    uuid: l.id != null ? String(l.id) : ""
+  };
+}
+function toArray(d){
+  if(Array.isArray(d)) return d;
+  if(d && typeof d === "object"){
+    var k = ["data","levels","results","items"];
+    for(var i=0;i<k.length;i++) if(Array.isArray(d[k[i]])) return d[k[i]];
+  }
+  return null;
+}
+function setLevels(arr){
+  levels = arr.slice().sort(function(a,b){ return (a.pos==null?1e9:a.pos)-(b.pos==null?1e9:b.pos); });
+  byKey = {}; levels.forEach(function(l){ byKey[l.key] = l; });
+}
+function inProg(key){ return prog.some(function(p){ return p.key === key; }); }
+function persist(){ save(KEY_PROG, prog); }
+
+// ---- Level details (publisher name, creators, verifier, date, image) ----
+// The list endpoint only returns rank, name, ID and a publisher code, so details are loaded
+// one level at a time as rows scroll into view. The detail endpoint was NOT verified: the page
+// tries API + "/" + id and degrades to "Unknown" if that fails.
+var KEY_DET = "apl.details.v2";
+var details = load(KEY_DET) || {}, missing = {}, queued = {}, queue = [], inflight = 0;
+var okCount = 0, failCount = 0, detailBroken = false, rowsByKey = {}, saveTimer = null;
+
+function pickVideo(d){
+  var vs = (d.verifications || []).filter(function(v){ return v && v.video_url && !v.hide_video && /^https?:\/\//i.test(v.video_url); });
+  return vs.length ? vs[0].video_url : "";
+}
+function normDetail(d){
+  var ver = d.verification || (d.verifications && d.verifications[0]) || d.verifier || null;
+  return {
+    publisher: nameOf(d.publisher),
+    creator: listNames(d.creators) || listNames(d.creator),
+    verifier: nameOf(ver && (ver.submitted_by || ver.player || ver.user)) || nameOf(d.verifier),
+    date: fmtDate(d.created_at || d.published_at || d.date_published || d.publish_date || d.date),
+    img: findImage(d),
+    video: pickVideo(d)
+  };
+}
+function fetchDetail(id){
+  return fetch(API + "/" + encodeURIComponent(id), {headers:{"Accept":"application/json"}})
+    .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+}
+function getDetail(l){
+  return fetchDetail(l.uuid || l.gd).catch(function(){
+    if(l.uuid && l.gd !== "" && l.gd != null) return fetchDetail(l.gd);
+    throw new Error("no detail");
+  });
+}
+function repaint(key){ (rowsByKey[key] || []).forEach(function(r){ r._paint(); }); }
+function pump(){
+  while(inflight < 4 && queue.length && !detailBroken){
+    (function(l){
+      inflight++;
+      getDetail(l).then(function(d){
+        okCount++; details[l.key] = normDetail(d);
+        clearTimeout(saveTimer); saveTimer = setTimeout(function(){ save(KEY_DET, details); }, 1000);
+      }).catch(function(){
+        failCount++; missing[l.key] = 1;
+        if(okCount === 0 && failCount >= 5){ detailBroken = true; render(); }
+      }).then(function(){ inflight--; repaint(l.key); pump(); });
+    })(queue.shift());
+  }
+}
+function queueDetail(l){
+  if(details[l.key] || queued[l.key]) return;
+  queued[l.key] = 1; queue.push(l); pump();
+}
+var io = "IntersectionObserver" in window ? new IntersectionObserver(function(es){
+  es.forEach(function(e){ if(e.isIntersecting){ io.unobserve(e.target); queueDetail(e.target._level); } });
+}, {root: document.getElementById("panel"), rootMargin: "400px"}) : null;
+
+function makeRow(l, extra){
+  var row = el("div","row" + (extra && extra.cls ? " " + extra.cls : ""));
+  var thumb = el("div","thumb");
+  if(l.pos != null && !l.legacy) thumb.appendChild(el("span","rank","#" + l.pos));
+  var face = el("span","");
+  thumb.appendChild(face);
+  var mid = el("div","col");
+  var pPub = el("div","pill"), pVer = el("div","pill");
+  mid.appendChild(pPub); mid.appendChild(pVer);
+  var right = el("div","col right");
+  right.appendChild(el("div","pill","ID: " + (l.gd !== "" && l.gd != null ? l.gd : "---------")));
+  row.appendChild(thumb); row.appendChild(mid); row.appendChild(right);
+
+  row._level = l;
+  // Clicking the image opens the level's verification video instead of adding/removing the level.
+  thumb.addEventListener("click", function(e){
+    if(thumb._video){ e.stopPropagation(); window.open(thumb._video, "_blank", "noopener"); }
+  });
+  row._paint = function(){
+    var d = details[l.key] || {};
+    var wait = !details[l.key] && !missing[l.key] && !detailBroken ? "..." : "Unknown";
+    pPub.textContent = "Publisher: " + (l.publisher || d.publisher || wait);
+    pVer.textContent = "Verifier: " + (l.verifier || d.verifier || wait);
+    thumb._video = d.video || "";
+    thumb.style.cursor = thumb._video ? "pointer" : "";
+    thumb.title = thumb._video ? "Watch the verification video" : "";
+    var src = l.img || d.img || "";
+    if(src && face.dataset.src !== src){
+      face.dataset.src = src; face.textContent = "";
+      var im = document.createElement("img"); im.src = src; im.alt = ""; im.loading = "lazy";
+      im.onerror = function(){ im.remove(); face.dataset.src = ""; face.textContent = l.name; };
+      face.appendChild(im);
+    } else if(!src && !face.dataset.src){
+      face.textContent = l.name;
+    }
+  };
+  (rowsByKey[l.key] = rowsByKey[l.key] || []).push(row);
+  row._paint();
+  if(io) io.observe(row);
+  return row;
+}
+
+function render(){
+  var rowsEl = document.getElementById("rows"); rowsEl.textContent = "";
+  rowsByKey = {};
+  var q = document.getElementById("q").value.trim().toLowerCase();
+  var status = document.getElementById("status");
+  var src = view === "demon" ? levels : prog.map(function(p){ return byKey[p.key] || p; });
+  var shown = src.filter(function(l){
+    return !q || (l.name + " " + l.publisher + " " + l.creator + " " + l.verifier + " " + l.gd).toLowerCase().indexOf(q) >= 0;
+  });
+  var frag = document.createDocumentFragment();
+
+  if(view === "demon"){
+    shown.forEach(function(l){
+      var used = inProg(l.key);
+      var row = makeRow(l, {cls: used ? "in" : ""});
+      if(!used) row.addEventListener("click", function(){ ask("Are you sure you want to add this to your Progression List?", l.name, function(){
+        prog.push(l); persist(); render();
+      }); });
+      frag.appendChild(row);
+    });
+    status.textContent = levels.length
+      ? "Showing " + shown.length + " of " + levels.length + " levels" + (fetchedAt ? " | updated " + new Date(fetchedAt).toLocaleTimeString() : "") + (detailBroken ? " | details unavailable" : "")
+      : "No data yet.";
+  } else {
+    if(!prog.length){
+      frag.appendChild(el("div","empty","Your Progression List is empty. Open the Demon List and click a level to add it."));
+    }
+    shown.slice().sort(function(a,b){ return (a.pos == null ? 1e9 : a.pos) - (b.pos == null ? 1e9 : b.pos); }).forEach(function(l){
+      var idx = prog.findIndex(function(p){ return p.key === l.key; });
+      var entry = prog[idx];
+      var row = makeRow(l, {cls: entry && entry.done ? "done" : ""});
+      var beat = el("button","beat", entry && entry.done ? "↺" : "✓");
+      beat.title = entry && entry.done ? "Mark as not beaten" : "Mark as beaten";
+      beat.addEventListener("click", function(e){ e.stopPropagation(); entry.done = !entry.done; persist(); render(); });
+      row.appendChild(beat);
+      row.addEventListener("click", function(){ ask("Are you sure you want to remove this from your Progression List?", l.name, function(){
+        prog.splice(idx,1); persist(); render();
+      }); });
+      frag.appendChild(row);
+    });
+    var done = prog.filter(function(p){ return p.done; }).length;
+    status.textContent = prog.length ? done + " of " + prog.length + " beaten | listed in rank order, click a level to remove it" : "";
+  }
+  rowsEl.appendChild(frag);
+}
+
+var pending = null;
+function ask(message, levelName, onYes){
+  var m = document.getElementById("cmsg"); m.textContent = message;
+  m.appendChild(el("small","", levelName));
+  pending = onYes;
+  document.getElementById("confirm").hidden = false;
+  document.getElementById("cyes").focus();
+}
+function closeAsk(){ document.getElementById("confirm").hidden = true; pending = null; }
+document.getElementById("cno").addEventListener("click", closeAsk);
+document.getElementById("cyes").addEventListener("click", function(){ var f = pending; closeAsk(); if(f) f(); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeAsk(); });
+
+function setView(v){
+  view = v;
+  document.getElementById("title").textContent = v === "demon" ? "Demon List" : "Progression List";
+  document.getElementById("tabDemon").setAttribute("aria-current", String(v === "demon"));
+  document.getElementById("tabProg").setAttribute("aria-current", String(v === "prog"));
+  document.getElementById("panel").scrollTop = 0;
+  render();
+}
+document.getElementById("tabDemon").addEventListener("click", function(){ setView("demon"); });
+document.getElementById("tabProg").addEventListener("click", function(){ setView("prog"); });
+document.getElementById("q").addEventListener("input", render);
+
+function showError(msg){
+  var e = document.getElementById("err"); e.textContent = "";
+  if(msg) e.appendChild(el("div","err", msg));
+}
+function fetchLevels(){
+  return fetch(API, {headers:{"Accept":"application/json"}})
+    .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function(d){
+      var arr = toArray(d);
+      if(!arr) throw new Error("Unexpected response shape. Top-level keys: " + (d && typeof d === "object" ? Object.keys(d).join(", ") : typeof d));
+      var next = arr.map(normalize);
+      if(next.length && next.every(function(l){ return l.pos == null; }))
+        throw new Error("Levels loaded but no position field was found. Fields on first item: " + Object.keys(arr[0]).join(", "));
+      fetchedAt = Date.now(); setLevels(next);
+      save(KEY_DATA, {at: fetchedAt, levels: next});
+      showError(""); render();
+    })
+    .catch(function(err){
+      var c = load(KEY_DATA);
+      if(c && c.levels && !levels.length){ fetchedAt = c.at; setLevels(c.levels); render(); }
+      showError("Could not refresh from the AREDL API: " + err.message + (levels.length ? "\nShowing the last saved copy." : ""));
+    });
+}
+setInterval(function(){ if(!document.hidden) fetchLevels(); }, REFRESH_MS);
+render();
+fetchLevels();
+</script>
+</body>
+</html>
