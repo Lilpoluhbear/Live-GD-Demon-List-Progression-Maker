@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Extreme Demon Progression</title>
+<style>
+:root{--bg:#f6f6f9;--fg:#1b1b24;--muted:#6b6b7b;--card:#fff;--line:#e2e2ea;--accent:#c2410c;--ok:#15803d;--okbg:rgba(21,128,61,.14);--bad:#b91c1c}
+@media (prefers-color-scheme:dark){:root{--bg:#121218;--fg:#ececf3;--muted:#9a9ab0;--card:#1a1a23;--line:#2a2a36;--accent:#fb923c;--ok:#4ade80;--okbg:rgba(74,222,128,.16);--bad:#f87171;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 60px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{margin:0;font-size:1.3rem}
+button,input{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+#dl{font-weight:700;font-size:1.05rem;border-color:var(--accent);color:var(--accent)}
+.muted{color:var(--muted);font-size:.85rem}
+.err{border:1px solid var(--bad);border-radius:6px;padding:10px;margin:10px 0;color:var(--bad);white-space:pre-wrap}
+ul{list-style:none;margin:8px 0 0;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+li{display:grid;grid-template-columns:2rem 4rem 1fr auto;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+li.drag{opacity:.4}
+li.done{background:var(--okbg)}
+li.done .nm strong{color:var(--ok)}
+.idx{color:var(--muted);font-variant-numeric:tabular-nums}
+.pos{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.nm{min-width:0}
+.nm strong{overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.acts{display:flex;gap:6px;opacity:0;transition:opacity .12s}
+li:hover .acts,li:focus-within .acts{opacity:1}
+@media (hover:none){.acts{opacity:1}}
+.acts button{padding:4px 10px;line-height:1}
+.ok{color:var(--ok)}.no{color:var(--bad)}
+.panel{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:12px;margin-bottom:16px}
+.panel input[type=search]{width:100%;margin-bottom:8px}
+.panel ul{max-height:55vh;overflow:auto;margin-top:0}
+.panel li{grid-template-columns:4rem 1fr auto;cursor:pointer}
+.panel li:hover{background:var(--okbg)}
+.panel li.in{opacity:.5;cursor:default}
+.quick{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.quick button{padding:4px 10px;font-size:.85rem}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button id="dl" aria-expanded="false">Demon List</button>
+    <h1>My Extreme Demon Progression</h1>
+  </div>
+
+  <div id="panel" class="panel" hidden>
+    <input id="q" type="search" placeholder="Search name, creator or level ID">
+    <div class="muted" id="pstatus">Loading...</div>
+    <div id="err"></div>
+    <ul id="all"></ul>
+  </div>
+
+  <div class="muted" id="count"></div>
+  <div class="quick" id="quick"></div>
+  <ul id="prog"></ul>
+</div>
+<script>
+var API = "https://api.aredl.net/v2/api/aredl/levels";
+var REFRESH_MS = 5 * 60 * 1000;
+var MILESTONES = [1000,950,850,700,650,550,400,300,150,100,75,50,25,10,5,3,1];
+var KEY_PROG = "aredl.prog.v1", KEY_DATA = "aredl.levels.v1";
+var levels = [], byKey = {}, fetchedAt = null, prog = load(KEY_PROG) || [], dragFrom = null;
+
+function save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+
+// The API schema was not verified when this was written, so field names are matched loosely.
+function pickName(p){
+  if(!p) return "";
+  if(typeof p === "string") return p;
+  return p.global_name || p.display_name || p.username || p.name || "";
+}
+function normalize(l){
+  var gd = l.level_id != null ? l.level_id : (l.levelId != null ? l.levelId : "");
+  var pos = l.position != null ? l.position : l.pos;
+  return {
+    key: String(gd !== "" ? gd : (l.id != null ? l.id : l.name)),
+    gd: gd, pos: typeof pos === "number" ? pos : null,
+    name: l.name || "Unnamed level",
+    pub: pickName(l.publisher) || pickName(l.creator) || "",
+    legacy: !!l.legacy
+  };
+}
+function toArray(d){
+  if(Array.isArray(d)) return d;
+  if(d && typeof d === "object"){
+    var k = ["data","levels","results","items"];
+    for(var i=0;i<k.length;i++) if(Array.isArray(d[k[i]])) return d[k[i]];
+  }
+  return null;
+}
+function setLevels(arr){
+  levels = arr.slice().sort(function(a,b){ return (a.pos==null?1e9:a.pos)-(b.pos==null?1e9:b.pos); });
+  byKey = {}; levels.forEach(function(l){ byKey[l.key] = l; });
+}
+
+function inProg(key){ return prog.some(function(p){ return p.key === key; }); }
+function persist(){ save(KEY_PROG, prog); }
+function add(l){
+  if(inProg(l.key)) return;
+  prog.push({key:l.key, name:l.name, pub:l.pub, gd:l.gd, done:false});
+  persist(); renderProg(); renderAll();
+}
+function addMilestones(){
+  MILESTONES.forEach(function(n){
+    var l = levels.filter(function(x){ return x.pos === n; })[0];
+    if(l) add(l);
+  });
+}
+
+function el(tag, cls, text){
+  var e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text != null) e.textContent = text;
+  return e;
+}
+
+function renderProg(){
+  var ul = document.getElementById("prog");
+  ul.textContent = "";
+  var done = prog.filter(function(p){ return p.done; }).length;
+  document.getElementById("count").textContent = prog.length
+    ? done + " of " + prog.length + " beaten" + (fetchedAt ? " | ranks updated " + new Date(fetchedAt).toLocaleTimeString() : "")
+    : "";
+  if(!prog.length){
+    var li = el("li","empty","Your progression is empty. Open Demon List and click a demon to add it.");
+    li.style.display = "block"; ul.appendChild(li); return;
+  }
+  prog.forEach(function(p, i){
+    var live = byKey[p.key] || p;
+    var li = el("li", p.done ? "done" : "");
+    li.draggable = true;
+    li.addEventListener("dragstart", function(){ dragFrom = i; li.classList.add("drag"); });
+    li.addEventListener("dragend", function(){ li.classList.remove("drag"); });
+    li.addEventListener("dragover", function(e){ e.preventDefault(); });
+    li.addEventListener("drop", function(e){
+      e.preventDefault();
+      if(dragFrom == null || dragFrom === i) return;
+      var m = prog.splice(dragFrom, 1)[0]; prog.splice(i, 0, m);
+      dragFrom = null; persist(); renderProg();
+    });
+    li.appendChild(el("span","idx", String(i+1)));
+    li.appendChild(el("span","pos", live.pos != null && !live.legacy ? "#" + live.pos : (live.legacy ? "legacy" : "-")));
+    var nm = el("div","nm");
+    nm.appendChild(el("strong","", live.name));
+    nm.appendChild(el("div","meta", [live.pub ? "by " + live.pub : "", live.gd !== "" && live.gd != null ? "ID " + live.gd : ""].filter(Boolean).join(" | ")));
+    li.appendChild(nm);
+    var acts = el("div","acts");
+    var ok = el("button","ok", p.done ? "Undo" : "✓");
+    ok.title = p.done ? "Mark as not beaten" : "Mark as beaten";
+    ok.addEventListener("click", function(){ p.done = !p.done; persist(); renderProg(); });
+    var no = el("button","no","✗");
+    no.title = "Remove from progression";
+    no.addEventListener("click", function(){ prog.splice(i,1); persist(); renderProg(); renderAll(); });
+    acts.appendChild(ok); acts.appendChild(no);
+    li.appendChild(acts);
+    ul.appendChild(li);
+  });
+}
+
+function renderAll(){
+  var q = document.getElementById("q").value.trim().toLowerCase();
+  var rows = levels.filter(function(l){
+    return !q || (l.name + " " + l.pub + " " + l.gd).toLowerCase().indexOf(q) >= 0;
+  }).slice(0, 400);
+  var ul = document.getElementById("all");
+  ul.textContent = "";
+  rows.forEach(function(l){
+    var used = inProg(l.key);
+    var li = el("li", used ? "in" : "");
+    li.appendChild(el("span","pos", l.legacy ? "legacy" : (l.pos != null ? "#" + l.pos : "-")));
+    var nm = el("div","nm");
+    nm.appendChild(el("strong","", l.name));
+    nm.appendChild(el("div","meta", l.pub ? "by " + l.pub : ""));
+    li.appendChild(nm);
+    li.appendChild(el("span","muted", used ? "added" : "+ add"));
+    if(!used) li.addEventListener("click", function(){ add(l); });
+    ul.appendChild(li);
+  });
+  var s = document.getElementById("pstatus");
+  s.textContent = levels.length
+    ? "Showing " + rows.length + " of " + levels.length + " levels" + (rows.length === 400 ? " (search to narrow)" : "") + (fetchedAt ? " | updated " + new Date(fetchedAt).toLocaleTimeString() : "")
+    : "No data yet.";
+}
+
+function showError(msg){
+  var e = document.getElementById("err"); e.textContent = "";
+  if(msg) e.appendChild(el("div","err", msg));
+}
+
+function fetchLevels(){
+  return fetch(API, {headers:{"Accept":"application/json"}})
+    .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function(d){
+      var arr = toArray(d);
+      if(!arr) throw new Error("Unexpected response shape. Top-level keys: " + (d && typeof d === "object" ? Object.keys(d).join(", ") : typeof d));
+      var next = arr.map(normalize);
+      if(next.length && next.every(function(l){ return l.pos == null; }))
+        throw new Error("Levels loaded but no position field was found. Fields on first item: " + Object.keys(arr[0]).join(", "));
+      fetchedAt = Date.now(); setLevels(next);
+      save(KEY_DATA, {at: fetchedAt, levels: next});
+      showError(""); renderAll(); renderProg(); renderQuick();
+    })
+    .catch(function(err){
+      var c = load(KEY_DATA);
+      if(c && c.levels && !levels.length){ fetchedAt = c.at; setLevels(c.levels); renderAll(); renderProg(); renderQuick(); }
+      showError("Could not refresh from the AREDL API: " + err.message + (levels.length ? "\nShowing the last saved copy." : ""));
+    });
+}
+
+function renderQuick(){
+  var q = document.getElementById("quick"); q.textContent = "";
+  if(!levels.length) return;
+  var b = el("button","","Add milestone levels (top " + MILESTONES.join(", ") + ")");
+  b.addEventListener("click", addMilestones);
+  q.appendChild(b);
+  var c = el("button","","Clear progression");
+  c.addEventListener("click", function(){
+    if(c.dataset.sure){ prog = []; persist(); renderProg(); renderAll(); delete c.dataset.sure; c.textContent = "Clear progression"; }
+    else { c.dataset.sure = "1"; c.textContent = "Click again to confirm"; setTimeout(function(){ delete c.dataset.sure; c.textContent = "Clear progression"; }, 3000); }
+  });
+  q.appendChild(c);
+}
+
+document.getElementById("dl").addEventListener("click", function(){
+  var p = document.getElementById("panel");
+  p.hidden = !p.hidden;
+  this.setAttribute("aria-expanded", String(!p.hidden));
+});
+document.getElementById("q").addEventListener("input", renderAll);
+setInterval(function(){ if(!document.hidden) fetchLevels(); }, REFRESH_MS);
+renderProg();
+fetchLevels();
+</script>
+</body>
+</html>
